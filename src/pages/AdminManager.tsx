@@ -384,10 +384,23 @@ function AdminEditor({ config, currentUserEmail, lang }: { config: Config; curre
     const { data } = supabase.storage.from("presentations").getPublicUrl(path);
     const publicUrl = data.publicUrl;
     const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+    const fileValues = {
+      slides_url: publicUrl,
+      pdf_url: isPdf ? publicUrl : values.pdf_url ?? "",
+    };
+
+    if (editingId) {
+      const { error: updateError } = await supabase.from("presentations").update(fileValues).eq("id", editingId);
+      if (updateError) {
+        setMessage(updateError.message);
+        return;
+      }
+      await loadRows();
+    }
+
     setValues((current) => ({
       ...current,
-      slides_url: publicUrl,
-      pdf_url: isPdf ? publicUrl : current.pdf_url ?? "",
+      ...fileValues,
     }));
     setMessage(
       isPdf

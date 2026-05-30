@@ -73,6 +73,11 @@ create table if not exists public.presentations (
   created_at timestamptz not null default now()
 );
 
+alter table public.presentations add column if not exists slides_url text;
+alter table public.presentations add column if not exists pdf_url text;
+alter table public.presentations add column if not exists references_text text;
+alter table public.presentations add column if not exists discussion_notes text;
+
 create table if not exists public.news_posts (
   id uuid primary key default gen_random_uuid(),
   title_ru text not null,
