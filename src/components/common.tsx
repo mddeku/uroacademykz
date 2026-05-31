@@ -381,6 +381,7 @@ export function StatsCard({ stat, lang }: { stat: Stat; lang: Lang }) {
 
 export function JournalClubCard({ meeting, lang }: { meeting: Meeting; lang: Lang }) {
   const statusText = meeting.status === "upcoming" ? localize(t.upcoming, lang) : localize(t.completed, lang);
+  const [notesOpen, setNotesOpen] = useState(false);
 
   return (
     <article className="card p-5">
@@ -402,8 +403,15 @@ export function JournalClubCard({ meeting, lang }: { meeting: Meeting; lang: Lan
       <p className="muted mt-4">{localize(meeting.notes, lang)}</p>
       <div className="mt-4 flex flex-wrap gap-2">
         <span className="tag"><Download className="mr-1.5 h-3.5 w-3.5" />{meeting.presentationFile}</span>
-        <span className="tag"><MessageSquare className="mr-1.5 h-3.5 w-3.5" />{localize(t.notes, lang)}</span>
+        <button className="tag" onClick={() => setNotesOpen(!notesOpen)} type="button">
+          <MessageSquare className="mr-1.5 h-3.5 w-3.5" />{localize(t.notes, lang)}
+        </button>
       </div>
+      {notesOpen ? (
+        <div className="mt-4 rounded-lg bg-clinic-50 p-4 text-sm font-medium text-navy-800 dark:bg-white/5 dark:text-slate-100">
+          {localize(meeting.notes, lang) || (lang === "ru" ? "Заметки обсуждения пока не добавлены." : "Талқылау жазбалары әлі қосылмаған.")}
+        </div>
+      ) : null}
     </article>
   );
 }
@@ -510,7 +518,11 @@ export function LibraryCard({ item, lang }: { item: LibraryItem; lang: Lang }) {
       <p className="muted mt-1">{item.author} - {item.year}</p>
       <p className="muted mt-3">{localize(item.description, lang)}</p>
       <div className="mt-auto flex flex-wrap gap-2 pt-5">
-        <span className="tag"><Upload className="mr-1.5 h-3.5 w-3.5" />{item.link}</span>
+        {item.link ? (
+          <a className="tag" href={item.link} rel="noreferrer" target="_blank">
+            <Upload className="mr-1.5 h-3.5 w-3.5" />{item.link}
+          </a>
+        ) : null}
         {item.tags.map((tag) => <span className="tag" key={tag}>{tag}</span>)}
       </div>
     </article>

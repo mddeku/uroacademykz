@@ -51,6 +51,9 @@ import {
   fetchNewsPosts,
   fetchPresentations,
   fetchQuizQuestions,
+  createComment,
+  fetchClinicalCase,
+  fetchComments,
   fetchResearchProjects,
   fetchSiteContent,
   type SiteContentBlock,
@@ -77,7 +80,7 @@ import {
   StatsCard,
   localize,
 } from "../components/common";
-import type { Lang, LibraryItem, Meeting, NewsPost, PageId, Presentation, QuizQuestion, Resident, ResearchProject, Faculty } from "../types";
+import type { ClinicalCase, Lang, LibraryItem, Meeting, NewsPost, PageId, Presentation, QuizQuestion, Resident, ResearchProject, Faculty } from "../types";
 
 type PageProps = {
   lang: Lang;
@@ -490,9 +493,10 @@ function ArchiveDetails({ item, lang, onPreview }: { item: Presentation; lang: L
             <FileText className="h-5 w-5 shrink-0 text-gold-700 dark:text-gold-300" />
             {fileUrl ? localize(t.pdfPlaceholder, lang) : lang === "ru" ? "Файл доклада пока не загружен" : "Баяндама файлы әлі жүктелмеген"}
           </button>
-          <PlaceholderCard icon={BookMarked} label={localize(t.references, lang)} />
-          <PlaceholderCard icon={ClipboardList} label={localize(t.comments, lang)} />
+          <InfoBox icon={BookMarked} title={localize(t.references, lang)} body={item.referencesText || (lang === "ru" ? "Список литературы пока не добавлен." : "Әдебиеттер әлі қосылмаған.")} />
+          <InfoBox icon={ClipboardList} title={localize(t.notes, lang)} body={item.discussionNotes || (lang === "ru" ? "Заметки обсуждения пока не добавлены." : "Талқылау жазбалары әлі қосылмаған.")} />
         </div>
+        <CommentPanel entityType="presentation" entityId={item.id} lang={lang} />
       </article>
       <article className="card p-5">
         <p className="eyebrow">{localize(t.keyPoints, lang)}</p>
@@ -505,6 +509,65 @@ function ArchiveDetails({ item, lang, onPreview }: { item: Presentation; lang: L
           ))}
         </ul>
       </article>
+    </div>
+  );
+}
+
+function InfoBox({ icon: Icon, title, body }: { icon: typeof BookMarked; title: string; body: string }) {
+  return (
+    <div className="min-h-20 rounded-lg border border-dashed border-clinic-200 bg-clinic-50 p-3 text-sm font-semibold text-clinic-700 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
+      <div className="flex items-center gap-3">
+        <Icon className="h-5 w-5 shrink-0 text-gold-700 dark:text-gold-300" />
+        <span>{title}</span>
+      </div>
+      <p className="mt-3 whitespace-pre-line font-medium text-navy-800 dark:text-slate-100">{body}</p>
+    </div>
+  );
+}
+
+function CommentPanel({ entityType, entityId, lang }: { entityType: string; entityId: string; lang: Lang }) {
+  const [comments, setComments] = useState<Array<{ id: string; author_name: string; body: string }>>([]);
+  const [authorName, setAuthorName] = useState("");
+  const [body, setBody] = useState("");
+  const [message, setMessage] = useState("");
+
+  const loadComments = () => {
+    fetchComments(entityType, entityId)
+      .then((items) => setComments(items as Array<{ id: string; author_name: string; body: string }>))
+      .catch(() => setComments([]));
+  };
+
+  useEffect(loadComments, [entityType, entityId]);
+
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    try {
+      await createComment(entityType, entityId, authorName || (lang === "ru" ? "Гость" : "Қонақ"), body);
+      setBody("");
+      setMessage(lang === "ru" ? "Комментарий добавлен" : "Пікір қосылды");
+      loadComments();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : lang === "ru" ? "Комментарий не сохранён" : "Пікір сақталмады");
+    }
+  };
+
+  return (
+    <div className="mt-6 rounded-lg bg-clinic-50 p-4 dark:bg-white/5">
+      <p className="font-bold text-navy-950 dark:text-white">{localize(t.comments, lang)}</p>
+      <div className="mt-3 grid gap-2">
+        {comments.map((comment) => (
+          <div className="rounded-lg bg-white p-3 text-sm dark:bg-navy-900" key={comment.id}>
+            <p className="font-bold text-navy-950 dark:text-white">{comment.author_name}</p>
+            <p className="muted mt-1">{comment.body}</p>
+          </div>
+        ))}
+      </div>
+      <form className="mt-4 grid gap-3" onSubmit={submit}>
+        <input className="field" placeholder={lang === "ru" ? "Ваше имя" : "Атыңыз"} value={authorName} onChange={(event) => setAuthorName(event.target.value)} />
+        <textarea className="field min-h-24" placeholder={lang === "ru" ? "Ваш комментарий" : "Пікіріңіз"} required value={body} onChange={(event) => setBody(event.target.value)} />
+        <button className="secondary-button" type="submit">{lang === "ru" ? "Отправить комментарий" : "Пікір жіберу"}</button>
+      </form>
+      {message ? <p className="muted mt-2">{message}</p> : null}
     </div>
   );
 }
@@ -854,6 +917,26 @@ export function ResearchPage({ lang }: PageProps) {
 export function CasePage({ lang }: PageProps) {
   const [selected, setSelected] = useState<number | undefined>();
   const [showAnswer, setShowAnswer] = useState(false);
+  const [liveCase, setLiveCase] = useState<ClinicalCase>({
+    id: "case-of-week",
+    title: caseOfWeek.title,
+    description: caseOfWeek.description,
+    differential: caseOfWeek.differential,
+    options: caseOfWeek.options,
+    final: caseOfWeek.final,
+    learning: caseOfWeek.learning,
+    mediaUrls: [],
+    fileUrls: [],
+    opinionPrompt: { ru: "Ваше мнение по клиническому случаю", kz: "Клиникалық жағдай бойынша пікіріңіз" },
+  });
+
+  useEffect(() => {
+    fetchClinicalCase()
+      .then((item) => {
+        if (item) setLiveCase(item);
+      })
+      .catch(() => undefined);
+  }, []);
 
   return (
     <>
@@ -869,14 +952,18 @@ export function CasePage({ lang }: PageProps) {
         <div className="shell grid gap-6 lg:grid-cols-[1fr_380px]">
           <article className="card p-5">
             <p className="eyebrow">{localize(t.caseDescription, lang)}</p>
-            <h2 className="mt-2 text-2xl font-black text-navy-950 dark:text-white">{localize(caseOfWeek.title, lang)}</h2>
-            <p className="muted mt-4 text-base">{localize(caseOfWeek.description, lang)}</p>
+            <h2 className="mt-2 text-2xl font-black text-navy-950 dark:text-white">{localize(liveCase.title, lang)}</h2>
+            <p className="muted mt-4 text-base">{localize(liveCase.description, lang)}</p>
             <div className="my-6 grid gap-3 sm:grid-cols-2">
-              <PlaceholderCard icon={Upload} label={lang === "ru" ? "Изображения и лабораторные данные" : "Суреттер мен зертханалық деректер"} />
-              <PlaceholderCard icon={LineChart} label={lang === "ru" ? "Динамика состояния" : "Жағдай динамикасы"} />
+              {liveCase.mediaUrls.length ? liveCase.mediaUrls.map((url) => (
+                <a className="secondary-button" href={url} key={url} rel="noreferrer" target="_blank"><Upload className="h-4 w-4" />{lang === "ru" ? "Открыть медиа" : "Медиа ашу"}</a>
+              )) : <PlaceholderCard icon={Upload} label={lang === "ru" ? "Изображения и лабораторные данные" : "Суреттер мен зертханалық деректер"} />}
+              {liveCase.fileUrls.length ? liveCase.fileUrls.map((url) => (
+                <a className="secondary-button" href={url} key={url} rel="noreferrer" target="_blank"><LineChart className="h-4 w-4" />{lang === "ru" ? "Открыть файл" : "Файл ашу"}</a>
+              )) : <PlaceholderCard icon={LineChart} label={lang === "ru" ? "Динамика состояния" : "Жағдай динамикасы"} />}
             </div>
             <div className="grid gap-2">
-              {caseOfWeek.options.map((option, index) => (
+              {liveCase.options.map((option, index) => (
                 <button
                   className={`rounded-lg border px-3 py-3 text-left text-sm font-semibold transition ${
                     selected === index
@@ -906,7 +993,7 @@ export function CasePage({ lang }: PageProps) {
             <article className="card p-5">
               <p className="eyebrow">{localize(t.differential, lang)}</p>
               <ul className="mt-4 space-y-2">
-                {caseOfWeek.differential.map((item) => (
+                {liveCase.differential.map((item) => (
                   <li className="flex gap-2 text-sm text-navy-800 dark:text-slate-100" key={localize(item, lang)}>
                     <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-gold-700 dark:text-gold-300" />
                     {localize(item, lang)}
@@ -917,16 +1004,22 @@ export function CasePage({ lang }: PageProps) {
             {showAnswer ? (
               <article className="card p-5">
                 <p className="eyebrow">{localize(t.finalAnswer, lang)}</p>
-                <p className="mt-3 text-sm font-semibold leading-6 text-navy-900 dark:text-slate-100">{localize(caseOfWeek.final, lang)}</p>
+                <p className="mt-3 text-sm font-semibold leading-6 text-navy-900 dark:text-slate-100">{localize(liveCase.final, lang)}</p>
                 <p className="eyebrow mt-5">{localize(t.learningPoints, lang)}</p>
                 <ul className="mt-3 space-y-2">
-                  {caseOfWeek.learning.map((item) => (
+                  {liveCase.learning.map((item) => (
                     <li className="muted" key={localize(item, lang)}>{localize(item, lang)}</li>
                   ))}
                 </ul>
               </article>
             ) : null}
           </aside>
+        </div>
+        <div className="shell mt-6">
+          <article className="card p-5">
+            <p className="eyebrow">{localize(liveCase.opinionPrompt, lang)}</p>
+            <CommentPanel entityType="case" entityId={liveCase.id} lang={lang} />
+          </article>
         </div>
       </Section>
     </>

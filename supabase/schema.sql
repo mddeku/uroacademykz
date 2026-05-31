@@ -134,6 +134,8 @@ create table if not exists public.library_items (
   created_at timestamptz not null default now()
 );
 
+alter table public.library_items add column if not exists file_url text;
+
 create table if not exists public.research_projects (
   id uuid primary key default gen_random_uuid(),
   title_ru text not null,
@@ -167,10 +169,34 @@ create table if not exists public.quiz_questions (
 create table if not exists public.comments (
   id uuid primary key default gen_random_uuid(),
   entity_type text not null,
-  entity_id uuid not null,
+  entity_id text not null,
   author_name text not null,
   body text not null,
   is_approved boolean not null default false,
+  created_at timestamptz not null default now()
+);
+
+alter table public.comments alter column entity_id type text using entity_id::text;
+
+create table if not exists public.clinical_cases (
+  id uuid primary key default gen_random_uuid(),
+  title_ru text not null,
+  title_kz text not null,
+  description_ru text,
+  description_kz text,
+  differential_ru text[] not null default '{}',
+  differential_kz text[] not null default '{}',
+  options_ru text[] not null default '{}',
+  options_kz text[] not null default '{}',
+  final_ru text,
+  final_kz text,
+  learning_ru text[] not null default '{}',
+  learning_kz text[] not null default '{}',
+  media_urls text[] not null default '{}',
+  file_urls text[] not null default '{}',
+  opinion_prompt_ru text,
+  opinion_prompt_kz text,
+  is_active boolean not null default true,
   created_at timestamptz not null default now()
 );
 
@@ -199,6 +225,7 @@ alter table public.library_items enable row level security;
 alter table public.research_projects enable row level security;
 alter table public.quiz_questions enable row level security;
 alter table public.comments enable row level security;
+alter table public.clinical_cases enable row level security;
 alter table public.site_content enable row level security;
 
 drop policy if exists "Admin users can read own record" on public.admin_users;
@@ -211,6 +238,8 @@ drop policy if exists "Public read library" on public.library_items;
 drop policy if exists "Public read research projects" on public.research_projects;
 drop policy if exists "Public read active quiz questions" on public.quiz_questions;
 drop policy if exists "Public read approved comments" on public.comments;
+drop policy if exists "Public insert comments" on public.comments;
+drop policy if exists "Public read active clinical cases" on public.clinical_cases;
 drop policy if exists "Public read site content" on public.site_content;
 drop policy if exists "Authenticated manage residents" on public.residents;
 drop policy if exists "Authenticated manage faculty" on public.faculty;
@@ -231,6 +260,7 @@ drop policy if exists "Editors manage library" on public.library_items;
 drop policy if exists "Editors manage research" on public.research_projects;
 drop policy if exists "Editors manage quiz" on public.quiz_questions;
 drop policy if exists "Editors manage comments" on public.comments;
+drop policy if exists "Editors manage clinical cases" on public.clinical_cases;
 drop policy if exists "Editors manage site content" on public.site_content;
 
 create policy "Admin users can read own record" on public.admin_users
@@ -247,6 +277,8 @@ create policy "Public read library" on public.library_items for select using (tr
 create policy "Public read research projects" on public.research_projects for select using (true);
 create policy "Public read active quiz questions" on public.quiz_questions for select using (is_active = true);
 create policy "Public read approved comments" on public.comments for select using (is_approved = true);
+create policy "Public insert comments" on public.comments for insert with check (is_approved = true);
+create policy "Public read active clinical cases" on public.clinical_cases for select using (is_active = true);
 create policy "Public read site content" on public.site_content for select using (is_published = true);
 
 create policy "Editors manage residents" on public.residents for all to authenticated using (public.is_editor()) with check (public.is_editor());
@@ -258,6 +290,7 @@ create policy "Editors manage library" on public.library_items for all to authen
 create policy "Editors manage research" on public.research_projects for all to authenticated using (public.is_editor()) with check (public.is_editor());
 create policy "Editors manage quiz" on public.quiz_questions for all to authenticated using (public.is_editor()) with check (public.is_editor());
 create policy "Editors manage comments" on public.comments for all to authenticated using (public.is_editor()) with check (public.is_editor());
+create policy "Editors manage clinical cases" on public.clinical_cases for all to authenticated using (public.is_editor()) with check (public.is_editor());
 create policy "Editors manage site content" on public.site_content for all to authenticated using (public.is_editor()) with check (public.is_editor());
 
 insert into storage.buckets (id, name, public)

@@ -164,6 +164,8 @@ const configs: Config[] = [
       { key: "abstract_kz", label: { ru: "Аннотация KZ", kz: "Аннотация KZ" }, type: "textarea" },
       { key: "key_points_ru", label: { ru: "Выводы RU через запятую", kz: "Тұжырым RU" } },
       { key: "key_points_kz", label: { ru: "Выводы KZ через запятую", kz: "Тұжырым KZ" } },
+      { key: "references_text", label: { ru: "Список литературы", kz: "Әдебиеттер" }, type: "textarea" },
+      { key: "discussion_notes", label: { ru: "Заметки обсуждения", kz: "Талқылау жазбалары" }, type: "textarea" },
       { key: "tags", label: { ru: "Теги через запятую", kz: "Тегтер" } },
     ],
     summary: (row) => String(row.title_ru ?? "Презентация"),
@@ -183,6 +185,7 @@ const configs: Config[] = [
       { key: "category_ru", label: { ru: "Категория RU", kz: "Санат RU" }, defaultValue: "Рекомендации", required: true },
       { key: "category_kz", label: { ru: "Категория KZ", kz: "Санат KZ" }, defaultValue: "Нұсқаулықтар", required: true },
       { key: "section", label: { ru: "Раздел", kz: "Бөлім" }, type: "select", options: ["books", "guidelines", "papers", "images", "links"], defaultValue: "guidelines" },
+      { key: "file_url", label: { ru: "Файл книги / PDF", kz: "Кітап / PDF файлы" } },
       { key: "external_link", label: { ru: "Внешняя ссылка", kz: "Сыртқы сілтеме" } },
       { key: "description_ru", label: { ru: "Описание RU", kz: "Сипаттама RU" }, type: "textarea" },
       { key: "description_kz", label: { ru: "Описание KZ", kz: "Сипаттама KZ" }, type: "textarea" },
@@ -190,6 +193,45 @@ const configs: Config[] = [
     ],
     summary: (row) => String(row.title_ru ?? "Материал"),
     toPayload: (v) => ({ ...v, tags: list(v.tags) }),
+  },
+  {
+    id: "case",
+    table: "clinical_cases",
+    title: { ru: "Клинический случай недели", kz: "Аптаның клиникалық жағдайы" },
+    description: { ru: "Сценарий, варианты ответа, медиа, файлы и финальный разбор.", kz: "Сценарий, жауап нұсқалары, медиа, файлдар және қорытынды талдау." },
+    icon: ClipboardList,
+    fields: [
+      { key: "title_ru", label: { ru: "Название RU", kz: "Атауы RU" }, required: true },
+      { key: "title_kz", label: { ru: "Название KZ", kz: "Атауы KZ" }, required: true },
+      { key: "description_ru", label: { ru: "Описание случая RU", kz: "Жағдай сипаттамасы RU" }, type: "textarea" },
+      { key: "description_kz", label: { ru: "Описание случая KZ", kz: "Жағдай сипаттамасы KZ" }, type: "textarea" },
+      { key: "differential_ru", label: { ru: "Дифференциал RU через запятую", kz: "Дифференциал RU" } },
+      { key: "differential_kz", label: { ru: "Дифференциал KZ через запятую", kz: "Дифференциал KZ" } },
+      { key: "options_ru", label: { ru: "Варианты RU через запятую", kz: "Нұсқалар RU" } },
+      { key: "options_kz", label: { ru: "Варианты KZ через запятую", kz: "Нұсқалар KZ" } },
+      { key: "final_ru", label: { ru: "Финальный ответ RU", kz: "Қорытынды жауап RU" }, type: "textarea" },
+      { key: "final_kz", label: { ru: "Финальный ответ KZ", kz: "Қорытынды жауап KZ" }, type: "textarea" },
+      { key: "learning_ru", label: { ru: "Учебные выводы RU через запятую", kz: "Оқу тұжырымдары RU" } },
+      { key: "learning_kz", label: { ru: "Учебные выводы KZ через запятую", kz: "Оқу тұжырымдары KZ" } },
+      { key: "media_urls", label: { ru: "Картинки/видео через запятую", kz: "Суреттер/видео" } },
+      { key: "file_urls", label: { ru: "Файлы через запятую", kz: "Файлдар" } },
+      { key: "opinion_prompt_ru", label: { ru: "Вопрос для мнения RU", kz: "Пікір сұрағы RU" } },
+      { key: "opinion_prompt_kz", label: { ru: "Вопрос для мнения KZ", kz: "Пікір сұрағы KZ" } },
+      { key: "is_active", label: { ru: "Активен true/false", kz: "Белсенді true/false" }, defaultValue: "true" },
+    ],
+    summary: (row) => String(row.title_ru ?? "Клинический случай"),
+    toPayload: (v) => ({
+      ...v,
+      differential_ru: list(v.differential_ru),
+      differential_kz: list(v.differential_kz),
+      options_ru: list(v.options_ru),
+      options_kz: list(v.options_kz),
+      learning_ru: list(v.learning_ru),
+      learning_kz: list(v.learning_kz),
+      media_urls: list(v.media_urls),
+      file_urls: list(v.file_urls),
+      is_active: v.is_active !== "false",
+    }),
   },
   {
     id: "news",
@@ -220,12 +262,13 @@ const configs: Config[] = [
     icon: MessageSquare,
     fields: [
       { key: "entity_type", label: { ru: "Тип", kz: "Түрі" }, type: "select", options: ["presentation", "news", "case"], defaultValue: "presentation" },
+      { key: "entity_id", label: { ru: "ID записи", kz: "Жазба ID" } },
       { key: "author_name", label: { ru: "Автор", kz: "Автор" }, required: true },
       { key: "body", label: { ru: "Комментарий", kz: "Пікір" }, type: "textarea", required: true },
       { key: "is_approved", label: { ru: "Одобрен true/false", kz: "Бекітілді true/false" }, defaultValue: "true" },
     ],
     summary: (row) => `${String(row.author_name ?? "Комментарий")}: ${String(row.body ?? "").slice(0, 60)}`,
-    toPayload: (v) => ({ entity_type: v.entity_type, entity_id: crypto.randomUUID(), author_name: v.author_name, body: v.body, is_approved: v.is_approved !== "false" }),
+    toPayload: (v) => ({ entity_type: v.entity_type, entity_id: v.entity_id || "general", author_name: v.author_name, body: v.body, is_approved: v.is_approved !== "false" }),
   },
   {
     id: "quiz",
@@ -414,6 +457,38 @@ function AdminEditor({ config, currentUserEmail, lang }: { config: Config; curre
     await loadRows();
   };
 
+  const uploadFileToBucket = async (event: ChangeEvent<HTMLInputElement>, bucket: string, fieldKey: string, append = false) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!currentUserEmail) {
+      setMessage(lang === "ru" ? "Сначала войдите в кабинет редакции." : "Алдымен редакция кабинетіне кіріңіз.");
+      return;
+    }
+
+    setUploading(true);
+    setMessage(lang === "ru" ? "Загружаю файл..." : "Файл жүктелуде...");
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "-");
+    const path = `${new Date().toISOString().slice(0, 10)}/${crypto.randomUUID()}-${safeName}`;
+    const { error } = await supabase.storage.from(bucket).upload(path, file, {
+      contentType: file.type || undefined,
+      upsert: false,
+    });
+    setUploading(false);
+
+    if (error) {
+      setMessage(error.message);
+      return;
+    }
+
+    const { data } = supabase.storage.from(bucket).getPublicUrl(path);
+    const publicUrl = data.publicUrl;
+    setValues((current) => ({
+      ...current,
+      [fieldKey]: append && current[fieldKey] ? `${current[fieldKey]}, ${publicUrl}` : publicUrl,
+    }));
+    setMessage(lang === "ru" ? "Файл загружен, ссылка добавлена в форму." : "Файл жүктелді, сілтеме формаға қосылды.");
+  };
+
   const uploadPresentationFile = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -489,6 +564,35 @@ function AdminEditor({ config, currentUserEmail, lang }: { config: Config; curre
                 ? "После загрузки ссылка автоматически попадет в карточку. PDF будет открываться в предпросмотре на сайте."
                 : "Жүктелгеннен кейін сілтеме карточкаға автоматты түрде түседі. PDF сайтта алдын ала ашылады."}
             </p>
+          </div>
+        ) : null}
+        {config.id === "library" ? (
+          <div className="rounded-lg border border-dashed border-clinic-200 bg-clinic-50 p-4 dark:border-white/10 dark:bg-white/5 md:col-span-2">
+            <label className="grid gap-2 text-sm font-semibold text-navy-900 dark:text-slate-100">
+              {lang === "ru" ? "Загрузить книгу, PDF или учебный файл" : "Кітап, PDF немесе оқу файлын жүктеу"}
+              <input
+                accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.png,.jpg,.jpeg,.webp,application/pdf"
+                className="field"
+                disabled={!currentUserEmail || uploading}
+                onChange={(event) => uploadFileToBucket(event, "library", "file_url")}
+                type="file"
+              />
+            </label>
+            <p className="muted mt-2">{lang === "ru" ? "После загрузки ссылка попадет в поле файла книги/PDF." : "Жүктелгеннен кейін сілтеме кітап/PDF өрісіне түседі."}</p>
+          </div>
+        ) : null}
+        {config.id === "case" ? (
+          <div className="rounded-lg border border-dashed border-clinic-200 bg-clinic-50 p-4 dark:border-white/10 dark:bg-white/5 md:col-span-2">
+            <div className="grid gap-3 md:grid-cols-2">
+              <label className="grid gap-2 text-sm font-semibold text-navy-900 dark:text-slate-100">
+                {lang === "ru" ? "Загрузить картинку/видео" : "Сурет/видео жүктеу"}
+                <input className="field" disabled={!currentUserEmail || uploading} onChange={(event) => uploadFileToBucket(event, "clinical-images", "media_urls", true)} type="file" />
+              </label>
+              <label className="grid gap-2 text-sm font-semibold text-navy-900 dark:text-slate-100">
+                {lang === "ru" ? "Загрузить файл к случаю" : "Жағдайға файл жүктеу"}
+                <input className="field" disabled={!currentUserEmail || uploading} onChange={(event) => uploadFileToBucket(event, "clinical-images", "file_urls", true)} type="file" />
+              </label>
+            </div>
           </div>
         ) : null}
         {config.fields.map((field) => {

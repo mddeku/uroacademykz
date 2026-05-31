@@ -1,5 +1,5 @@
 import { supabase } from "./supabase";
-import type { Faculty, LibraryItem, Meeting, NewsPost, Presentation, QuizQuestion, ResearchProject } from "../types";
+import type { ClinicalCase, Faculty, LibraryItem, Meeting, NewsPost, Presentation, QuizQuestion, ResearchProject } from "../types";
 
 const localizedArray = (ru?: string[] | null, kz?: string[] | null) =>
   Array.from({ length: Math.max(ru?.length ?? 0, kz?.length ?? 0) }, (_, index) => ({
@@ -41,6 +41,8 @@ export async function fetchPresentations(): Promise<Presentation[]> {
     tags: row.tags ?? [],
     slidesUrl: row.slides_url ?? "",
     pdfUrl: row.pdf_url ?? "",
+    discussionNotes: row.discussion_notes ?? "",
+    referencesText: row.references_text ?? "",
   }));
 }
 
@@ -73,6 +75,31 @@ export async function fetchLibraryItems(): Promise<LibraryItem[]> {
     tags: row.tags ?? [],
     link: row.external_link ?? row.file_url ?? "",
   }));
+}
+
+export async function fetchComments(entityType: string, entityId: string) {
+  const { data, error } = await supabase
+    .from("comments")
+    .select("*")
+    .eq("entity_type", entityType)
+    .eq("entity_id", entityId)
+    .eq("is_approved", true)
+    .order("created_at", { ascending: true });
+
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function createComment(entityType: string, entityId: string, authorName: string, body: string) {
+  const { error } = await supabase.from("comments").insert({
+    entity_type: entityType,
+    entity_id: entityId,
+    author_name: authorName,
+    body,
+    is_approved: true,
+  });
+
+  if (error) throw error;
 }
 
 export async function fetchFaculty(): Promise<Faculty[]> {
@@ -115,6 +142,32 @@ export async function fetchQuizQuestions(): Promise<QuizQuestion[]> {
     correct: row.correct_index,
     explanation: { ru: row.explanation_ru ?? "", kz: row.explanation_kz ?? "" },
   }));
+}
+
+export async function fetchClinicalCase(): Promise<ClinicalCase | null> {
+  const { data, error } = await supabase
+    .from("clinical_cases")
+    .select("*")
+    .eq("is_active", true)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) return null;
+
+  return {
+    id: data.id,
+    title: { ru: data.title_ru, kz: data.title_kz },
+    description: { ru: data.description_ru ?? "", kz: data.description_kz ?? "" },
+    differential: localizedArray(data.differential_ru, data.differential_kz),
+    options: localizedArray(data.options_ru, data.options_kz),
+    final: { ru: data.final_ru ?? "", kz: data.final_kz ?? "" },
+    learning: localizedArray(data.learning_ru, data.learning_kz),
+    mediaUrls: data.media_urls ?? [],
+    fileUrls: data.file_urls ?? [],
+    opinionPrompt: { ru: data.opinion_prompt_ru ?? "", kz: data.opinion_prompt_kz ?? "" },
+  };
 }
 
 export type SiteContentBlock = {

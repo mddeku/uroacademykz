@@ -57,6 +57,8 @@ export type Presentation = {
   tags: string[];
   slidesUrl?: string;
   pdfUrl?: string;
+  discussionNotes?: string;
+  referencesText?: string;
 };
 
 export type NewsPost = {
@@ -114,6 +116,19 @@ export type ResearchProject = {
   protocol: string;
   related: LocalizedString[];
   progress: LocalizedString;
+};
+
+export type ClinicalCase = {
+  id: string;
+  title: LocalizedString;
+  description: LocalizedString;
+  differential: LocalizedString[];
+  options: LocalizedString[];
+  final: LocalizedString;
+  learning: LocalizedString[];
+  mediaUrls: string[];
+  fileUrls: string[];
+  opinionPrompt: LocalizedString;
 };
 
 export type LearningModule = {
