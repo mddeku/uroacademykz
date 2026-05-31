@@ -480,24 +480,6 @@ function mergeSiteContentTemplates(rows: Record<string, unknown>[]) {
   return [...rows, ...missing].sort((a, b) => numeric(String(a.sort_order ?? "0")) - numeric(String(b.sort_order ?? "0")));
 }
 
-function missingSiteContentTemplates(rows: Record<string, unknown>[]) {
-  const existing = new Set(rows.map((row) => `${String(row.page_key ?? "")}/${String(row.block_key ?? "")}`));
-  return siteContentTemplates.filter((row) => !existing.has(`${String(row.page_key)}/${String(row.block_key)}`));
-}
-
-function siteContentPayload(row: Record<string, unknown>) {
-  return {
-    page_key: row.page_key,
-    block_key: row.block_key,
-    title_ru: row.title_ru,
-    title_kz: row.title_kz,
-    body_ru: row.body_ru,
-    body_kz: row.body_kz,
-    sort_order: row.sort_order,
-    is_published: row.is_published,
-  };
-}
-
 function normalizePayload(config: Config, values: Record<string, string>) {
   const payload = config.toPayload(values);
   config.fields.forEach((field) => {
@@ -528,18 +510,7 @@ function AdminEditor({ config, currentUserEmail, lang }: { config: Config; curre
     }
     const loadedRows = data?.length ? data : fallbackRows[config.id] ?? [];
     if (config.id === "siteContent") {
-      const missingTemplates = missingSiteContentTemplates(loadedRows);
-      if (currentUserEmail && missingTemplates.length) {
-        const { error: seedError } = await supabase
-          .from(config.table)
-          .upsert(missingTemplates.map(siteContentPayload), { onConflict: "page_key,block_key" });
-        if (!seedError) {
-          const { data: refreshedData } = await supabase.from(config.table).select("*").order("created_at", { ascending: false }).limit(100);
-          setRows(mergeSiteContentTemplates(refreshedData ?? loadedRows));
-          return;
-        }
-      }
-      setRows(mergeSiteContentTemplates(loadedRows));
+      setRows(loadedRows.length ? loadedRows : mergeSiteContentTemplates([]));
       return;
     }
     setRows(loadedRows);

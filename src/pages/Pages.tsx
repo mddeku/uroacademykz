@@ -289,16 +289,25 @@ function StatusLine({ value, label }: { value: number; label: string }) {
 
 export function AcademyPage({ lang }: PageProps) {
   const [contentBlocks, setContentBlocks] = useState<SiteContentBlock[]>([]);
+  const [contentLoaded, setContentLoaded] = useState(false);
 
   useEffect(() => {
     fetchSiteContent("academy")
-      .then(setContentBlocks)
-      .catch(() => setContentBlocks([]));
+      .then((blocks) => {
+        setContentBlocks(blocks);
+        setContentLoaded(true);
+      })
+      .catch(() => {
+        setContentBlocks([]);
+        setContentLoaded(false);
+      });
   }, []);
 
   const moduleBlocks = contentBlocks.filter((block) => block.blockKey.startsWith("module:"));
   const ruleBlocks = contentBlocks.filter((block) => block.blockKey.startsWith("slide_rule:"));
   const templateBlocks = contentBlocks.filter((block) => block.blockKey.startsWith("template:"));
+  const templateSection = contentBlocks.find((block) => block.blockKey === "templates");
+  const visibleTemplates = contentLoaded ? templateBlocks.map((block) => block.title) : templates;
 
   return (
     <>
@@ -360,10 +369,10 @@ export function AcademyPage({ lang }: PageProps) {
           </div>
           <div>
             <SectionTitle
-              title={lang === "ru" ? "Готовые шаблоны" : "Дайын үлгілер"}
+              title={templateSection ? localize(templateSection.title, lang) : (lang === "ru" ? "Готовые шаблоны" : "Дайын үлгілер")}
             />
             <div className="grid gap-3">
-              {(templateBlocks.length ? templateBlocks.map((block) => block.title) : templates).map((template) => (
+              {visibleTemplates.map((template) => (
                 <div className="card flex items-center justify-between gap-3 p-4" key={localize(template, lang)}>
                   <div className="flex items-center gap-3">
                     <FileText className="h-5 w-5 text-gold-700 dark:text-gold-300" />
