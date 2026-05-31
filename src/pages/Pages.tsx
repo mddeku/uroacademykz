@@ -43,6 +43,7 @@ import {
 import { navItems, t } from "../i18n";
 import { getCurrentUser, signInAdmin, signOutAdmin } from "../lib/auth";
 import { generateGuidelineTopic } from "../lib/topicGenerator";
+import { formatDisplayDate } from "../lib/dates";
 import {
   fetchFaculty,
   fetchLibraryItems,
@@ -251,7 +252,7 @@ export function JournalPage({ lang, countdown }: PageProps) {
               <div className="grid gap-3 sm:grid-cols-3">
                 {liveMeetings.map((meeting) => (
                   <div className="rounded-lg bg-clinic-50 p-4 dark:bg-white/5" key={meeting.id}>
-                    <p className="text-sm font-black text-navy-950 dark:text-white">{meeting.date}</p>
+                    <p className="text-sm font-black text-navy-950 dark:text-white">{formatDisplayDate(meeting.date)}</p>
                     <p className="muted mt-1 line-clamp-2">{localize(meeting.topic, lang)}</p>
                   </div>
                 ))}

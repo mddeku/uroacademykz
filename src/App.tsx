@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { meetings, searchItems } from "./data";
 import { Footer, Navbar, useFilteredSearch } from "./components/common";
 import { getCurrentUser } from "./lib/auth";
+import { fetchMeetings } from "./lib/content";
+import { parseDateTime } from "./lib/dates";
 import { supabase } from "./lib/supabase";
 import type { Lang, Meeting, PageId } from "./types";
 import {
@@ -19,17 +21,17 @@ import {
   ResidentsPage,
 } from "./pages/Pages";
 
-function getNextMeeting(): Meeting {
+function getNextMeeting(sourceMeetings: Meeting[]): Meeting {
   const now = new Date();
-  const upcoming = meetings
-    .filter((meeting) => new Date(`${meeting.date}T${meeting.time}:00`).getTime() >= now.getTime())
-    .sort((a, b) => new Date(`${a.date}T${a.time}:00`).getTime() - new Date(`${b.date}T${b.time}:00`).getTime());
+  const upcoming = sourceMeetings
+    .filter((meeting) => parseDateTime(meeting.date, meeting.time).getTime() >= now.getTime())
+    .sort((a, b) => parseDateTime(a.date, a.time).getTime() - parseDateTime(b.date, b.time).getTime());
 
-  return upcoming[0] ?? meetings[0];
+  return upcoming[0] ?? sourceMeetings[0] ?? meetings[0];
 }
 
 function formatCountdown(target: Meeting, lang: Lang) {
-  const targetDate = new Date(`${target.date}T${target.time}:00`);
+  const targetDate = parseDateTime(target.date, target.time);
   const diff = Math.max(0, targetDate.getTime() - Date.now());
   const totalMinutes = Math.floor(diff / 60000);
   const days = Math.floor(totalMinutes / 1440);
@@ -51,14 +53,23 @@ export default function App() {
   const [query, setQuery] = useState("");
   const [clock, setClock] = useState(Date.now());
   const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
+  const [liveMeetings, setLiveMeetings] = useState<Meeting[]>(meetings);
 
-  const nextMeeting = useMemo(getNextMeeting, [clock]);
+  const nextMeeting = useMemo(() => getNextMeeting(liveMeetings), [clock, liveMeetings]);
   const searchResults = useFilteredSearch(searchItems, query, lang);
   const countdown = useMemo(() => formatCountdown(nextMeeting, lang), [clock, lang, nextMeeting]);
 
   useEffect(() => {
     const timer = window.setInterval(() => setClock(Date.now()), 30000);
     return () => window.clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    fetchMeetings()
+      .then((items) => {
+        if (items.length) setLiveMeetings(items);
+      })
+      .catch(() => setLiveMeetings(meetings));
   }, []);
 
   useEffect(() => {

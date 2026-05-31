@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { languages, navItems, t } from "../i18n";
+import { formatDisplayDate } from "../lib/dates";
 import type {
   Faculty,
   Lang,
@@ -342,7 +343,7 @@ export function Hero({
               <p className="eyebrow">{localize(t.upcomingJournal, lang)}</p>
               <h2 className="mt-2 text-xl font-bold">{localize(meeting.topic, lang)}</h2>
             </div>
-            <span className="tag border-gold-300 bg-gold-100 text-gold-700">{meeting.date}</span>
+            <span className="tag border-gold-300 bg-gold-100 text-gold-700">{formatDisplayDate(meeting.date)}</span>
           </div>
           <dl className="space-y-3">
             <Detail label={localize(t.presenter, lang)} value={meeting.presenter} />
@@ -385,7 +386,7 @@ export function JournalClubCard({ meeting, lang }: { meeting: Meeting; lang: Lan
     <article className="card p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <span className="tag">{meeting.date} - {meeting.time}</span>
+          <span className="tag">{formatDisplayDate(meeting.date)} - {meeting.time}</span>
           <h3 className="mt-3 text-lg font-bold text-navy-950 dark:text-white">{localize(meeting.topic, lang)}</h3>
         </div>
         <span className={`tag ${meeting.status === "upcoming" ? "border-gold-300 bg-gold-100 text-gold-700" : ""}`}>
@@ -447,7 +448,7 @@ export function PresentationCard({ item, lang, onPreview }: { item: Presentation
   return (
     <article className="card flex h-full flex-col p-5">
       <div className="flex flex-wrap gap-2">
-        <span className="tag">{item.date}</span>
+        <span className="tag">{formatDisplayDate(item.date)}</span>
         <span className="tag">{localize(item.category, lang)}</span>
       </div>
       <h3 className="mt-4 text-lg font-bold text-navy-950 dark:text-white">{localize(item.title, lang)}</h3>
@@ -476,7 +477,7 @@ export function NewsCard({ post, lang, onOpen }: { post: NewsPost; lang: Lang; o
     <article className="card flex h-full flex-col p-5">
       <div className="flex flex-wrap items-center gap-2">
         <span className="tag">{post.category}</span>
-        <span className="muted">{post.date}</span>
+        <span className="muted">{formatDisplayDate(post.date)}</span>
       </div>
       <h3 className="mt-4 text-lg font-bold text-navy-950 dark:text-white">{localize(post.title, lang)}</h3>
       <p className="muted mt-2">{localize(post.summary, lang)}</p>
