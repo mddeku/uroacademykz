@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { meetings, searchItems } from "./data";
 import { Footer, Navbar, useFilteredSearch } from "./components/common";
 import { getCurrentUser } from "./lib/auth";
+import { supabase } from "./lib/supabase";
 import type { Lang, Meeting, PageId } from "./types";
 import {
   AcademyPage,
@@ -42,7 +43,10 @@ function formatCountdown(target: Meeting, lang: Lang) {
 
 export default function App() {
   const [lang, setLang] = useState<Lang>("ru");
-  const [page, setPage] = useState<PageId>("home");
+  const [page, setPage] = useState<PageId>(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("editor") === "1" ? "admin" : "home";
+  });
   const [darkMode, setDarkMode] = useState(false);
   const [query, setQuery] = useState("");
   const [clock, setClock] = useState(Date.now());
@@ -63,10 +67,20 @@ export default function App() {
 
   useEffect(() => {
     getCurrentUser().then((user) => setCurrentUserEmail(user?.email ?? null));
+    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+      setCurrentUserEmail(session?.user.email ?? null);
+    });
+
+    return () => data.subscription.unsubscribe();
   }, []);
 
   const navigate = (nextPage: PageId) => {
     setPage(nextPage);
+    if (nextPage === "admin") {
+      window.history.replaceState(null, "", "?editor=1");
+    } else if (window.location.search.includes("editor=1")) {
+      window.history.replaceState(null, "", window.location.pathname);
+    }
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
