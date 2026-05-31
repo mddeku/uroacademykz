@@ -1,5 +1,27 @@
 create extension if not exists "pgcrypto";
 
+create table if not exists public.admin_users (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  email text not null unique,
+  created_at timestamptz not null default now()
+);
+
+create or replace function public.is_editor()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.admin_users
+    where user_id = auth.uid()
+  );
+$$;
+
+grant execute on function public.is_editor() to authenticated;
+
 create table if not exists public.residents (
   id uuid primary key default gen_random_uuid(),
   full_name text not null,
@@ -167,6 +189,7 @@ create table if not exists public.site_content (
   unique (page_key, block_key)
 );
 
+alter table public.admin_users enable row level security;
 alter table public.residents enable row level security;
 alter table public.faculty enable row level security;
 alter table public.meetings enable row level security;
@@ -178,6 +201,7 @@ alter table public.quiz_questions enable row level security;
 alter table public.comments enable row level security;
 alter table public.site_content enable row level security;
 
+drop policy if exists "Admin users can read own record" on public.admin_users;
 drop policy if exists "Public read residents" on public.residents;
 drop policy if exists "Public read faculty" on public.faculty;
 drop policy if exists "Public read meetings" on public.meetings;
@@ -198,6 +222,21 @@ drop policy if exists "Authenticated manage research" on public.research_project
 drop policy if exists "Authenticated manage quiz" on public.quiz_questions;
 drop policy if exists "Authenticated manage comments" on public.comments;
 drop policy if exists "Authenticated manage site content" on public.site_content;
+drop policy if exists "Editors manage residents" on public.residents;
+drop policy if exists "Editors manage faculty" on public.faculty;
+drop policy if exists "Editors manage meetings" on public.meetings;
+drop policy if exists "Editors manage presentations" on public.presentations;
+drop policy if exists "Editors manage news" on public.news_posts;
+drop policy if exists "Editors manage library" on public.library_items;
+drop policy if exists "Editors manage research" on public.research_projects;
+drop policy if exists "Editors manage quiz" on public.quiz_questions;
+drop policy if exists "Editors manage comments" on public.comments;
+drop policy if exists "Editors manage site content" on public.site_content;
+
+create policy "Admin users can read own record" on public.admin_users
+for select
+to authenticated
+using (auth.uid() = user_id);
 
 create policy "Public read residents" on public.residents for select using (true);
 create policy "Public read faculty" on public.faculty for select using (true);
@@ -210,16 +249,16 @@ create policy "Public read active quiz questions" on public.quiz_questions for s
 create policy "Public read approved comments" on public.comments for select using (is_approved = true);
 create policy "Public read site content" on public.site_content for select using (is_published = true);
 
-create policy "Authenticated manage residents" on public.residents for all to authenticated using (true) with check (true);
-create policy "Authenticated manage faculty" on public.faculty for all to authenticated using (true) with check (true);
-create policy "Authenticated manage meetings" on public.meetings for all to authenticated using (true) with check (true);
-create policy "Authenticated manage presentations" on public.presentations for all to authenticated using (true) with check (true);
-create policy "Authenticated manage news" on public.news_posts for all to authenticated using (true) with check (true);
-create policy "Authenticated manage library" on public.library_items for all to authenticated using (true) with check (true);
-create policy "Authenticated manage research" on public.research_projects for all to authenticated using (true) with check (true);
-create policy "Authenticated manage quiz" on public.quiz_questions for all to authenticated using (true) with check (true);
-create policy "Authenticated manage comments" on public.comments for all to authenticated using (true) with check (true);
-create policy "Authenticated manage site content" on public.site_content for all to authenticated using (true) with check (true);
+create policy "Editors manage residents" on public.residents for all to authenticated using (public.is_editor()) with check (public.is_editor());
+create policy "Editors manage faculty" on public.faculty for all to authenticated using (public.is_editor()) with check (public.is_editor());
+create policy "Editors manage meetings" on public.meetings for all to authenticated using (public.is_editor()) with check (public.is_editor());
+create policy "Editors manage presentations" on public.presentations for all to authenticated using (public.is_editor()) with check (public.is_editor());
+create policy "Editors manage news" on public.news_posts for all to authenticated using (public.is_editor()) with check (public.is_editor());
+create policy "Editors manage library" on public.library_items for all to authenticated using (public.is_editor()) with check (public.is_editor());
+create policy "Editors manage research" on public.research_projects for all to authenticated using (public.is_editor()) with check (public.is_editor());
+create policy "Editors manage quiz" on public.quiz_questions for all to authenticated using (public.is_editor()) with check (public.is_editor());
+create policy "Editors manage comments" on public.comments for all to authenticated using (public.is_editor()) with check (public.is_editor());
+create policy "Editors manage site content" on public.site_content for all to authenticated using (public.is_editor()) with check (public.is_editor());
 
 insert into storage.buckets (id, name, public)
 values
@@ -234,23 +273,38 @@ drop policy if exists "Public read uploaded files" on storage.objects;
 drop policy if exists "Authenticated upload files" on storage.objects;
 drop policy if exists "Authenticated update files" on storage.objects;
 drop policy if exists "Authenticated delete files" on storage.objects;
+drop policy if exists "Editors upload files" on storage.objects;
+drop policy if exists "Editors update files" on storage.objects;
+drop policy if exists "Editors delete files" on storage.objects;
 
 create policy "Public read uploaded files" on storage.objects
 for select
 using (bucket_id in ('presentations', 'library', 'clinical-images', 'resident-photos', 'faculty-photos'));
 
-create policy "Authenticated upload files" on storage.objects
+create policy "Editors upload files" on storage.objects
 for insert
 to authenticated
-with check (bucket_id in ('presentations', 'library', 'clinical-images', 'resident-photos', 'faculty-photos'));
+with check (
+  public.is_editor()
+  and bucket_id in ('presentations', 'library', 'clinical-images', 'resident-photos', 'faculty-photos')
+);
 
-create policy "Authenticated update files" on storage.objects
+create policy "Editors update files" on storage.objects
 for update
 to authenticated
-using (bucket_id in ('presentations', 'library', 'clinical-images', 'resident-photos', 'faculty-photos'))
-with check (bucket_id in ('presentations', 'library', 'clinical-images', 'resident-photos', 'faculty-photos'));
+using (
+  public.is_editor()
+  and bucket_id in ('presentations', 'library', 'clinical-images', 'resident-photos', 'faculty-photos')
+)
+with check (
+  public.is_editor()
+  and bucket_id in ('presentations', 'library', 'clinical-images', 'resident-photos', 'faculty-photos')
+);
 
-create policy "Authenticated delete files" on storage.objects
+create policy "Editors delete files" on storage.objects
 for delete
 to authenticated
-using (bucket_id in ('presentations', 'library', 'clinical-images', 'resident-photos', 'faculty-photos'));
+using (
+  public.is_editor()
+  and bucket_id in ('presentations', 'library', 'clinical-images', 'resident-photos', 'faculty-photos')
+);

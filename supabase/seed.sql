@@ -356,10 +356,10 @@ insert into public.site_content (
   (
     'admin',
     'page_intro',
-    'Админ-панель',
-    'Әкімші панелі',
-    'Панель для управления содержимым сайта, резидентами, встречами, презентациями, библиотекой, новостями, тестами и исследованиями.',
-    'Сайт контентін, резиденттерді, кездесулерді, презентацияларды, кітапхананы, жаңалықтарды, тесттерді және зерттеулерді басқару панелі.',
+    'Кабинет редакции',
+    'Редакция кабинеті',
+    'Закрытый раздел для управления содержимым сайта, резидентами, встречами, презентациями, библиотекой, новостями, тестами и исследованиями.',
+    'Сайт контентін, резиденттерді, кездесулерді, презентацияларды, кітапхананы, жаңалықтарды, тесттерді және зерттеулерді басқаруға арналған жабық бөлім.',
     150
   )
 on conflict (page_key, block_key) do update set
@@ -484,3 +484,165 @@ select
   array['Robotics', 'Education'],
   true
 where not exists (select 1 from public.news_posts where title_ru = 'Роботическая хирургия: что читать резиденту');
+
+insert into public.faculty (
+  full_name,
+  degree_ru,
+  degree_kz,
+  position_ru,
+  position_kz,
+  expertise_ru,
+  expertise_kz,
+  bio_ru,
+  bio_kz,
+  contact
+)
+select
+  'проф. Тимур Байжанов',
+  'д.м.н., профессор',
+  'м.ғ.д., профессор',
+  'Научный руководитель Journal Club',
+  'Journal Club ғылыми жетекшісі',
+  array['Уроонкология', 'Клинические рекомендации', 'Академическое наставничество'],
+  array['Уроонкология', 'Клиникалық нұсқаулықтар', 'Академиялық тәлімгерлік'],
+  'Курирует научные разборы, презентации резидентов и исследовательские проекты кафедры.',
+  'Ғылыми талқылауларды, резиденттердің презентацияларын және кафедраның зерттеу жобаларын жетекшілік етеді.',
+  'uroacademy@example.kz'
+where not exists (select 1 from public.faculty where full_name = 'проф. Тимур Байжанов');
+
+insert into public.faculty (
+  full_name,
+  degree_ru,
+  degree_kz,
+  position_ru,
+  position_kz,
+  expertise_ru,
+  expertise_kz,
+  bio_ru,
+  bio_kz,
+  contact
+)
+select
+  'д-р Марина Волкова',
+  'PhD, врач-уролог',
+  'PhD, уролог дәрігер',
+  'Модератор клинических разборов',
+  'Клиникалық талдаулар модераторы',
+  array['Эндоурология', 'Инфекции мочевых путей', 'Доказательная медицина'],
+  array['Эндоурология', 'Несеп жолы инфекциялары', 'Дәлелді медицина'],
+  'Помогает резидентам переводить рекомендации EAU/AUA в практические клинические алгоритмы.',
+  'Резиденттерге EAU/AUA нұсқаулықтарын практикалық клиникалық алгоритмдерге айналдыруға көмектеседі.',
+  'uroacademy@example.kz'
+where not exists (select 1 from public.faculty where full_name = 'д-р Марина Волкова');
+
+insert into public.research_projects (
+  title_ru,
+  title_kz,
+  principal_investigator,
+  residents_involved,
+  status_ru,
+  status_kz,
+  deadline,
+  protocol_file,
+  related_articles_ru,
+  related_articles_kz,
+  progress_ru,
+  progress_kz
+)
+select
+  'Проспективный регистр пациентов с мочекаменной болезнью',
+  'Несеп-тас ауруы бар пациенттердің проспективті регистрі',
+  'проф. Тимур Байжанов',
+  array['Алия Смагулова', 'Марат Оспанов'],
+  'Набор пациентов',
+  'Пациенттерді жинау',
+  date '2026-09-30',
+  'protocol-stones-registry.pdf',
+  array['EAU Guidelines on Urolithiasis', 'AUA Surgical Management of Stones'],
+  array['EAU уролитиаз нұсқаулығы', 'AUA тастарды хирургиялық емдеу нұсқаулығы'],
+  'Согласованы критерии включения, форма сбора данных и первичные исходы.',
+  'Қосу критерийлері, дерек жинау формасы және бастапқы нәтижелер келісілді.'
+where not exists (select 1 from public.research_projects where title_ru = 'Проспективный регистр пациентов с мочекаменной болезнью');
+
+insert into public.research_projects (
+  title_ru,
+  title_kz,
+  principal_investigator,
+  residents_involved,
+  status_ru,
+  status_kz,
+  deadline,
+  protocol_file,
+  related_articles_ru,
+  related_articles_kz,
+  progress_ru,
+  progress_kz
+)
+select
+  'Аудит антибиотикопрофилактики перед эндоурологическими вмешательствами',
+  'Эндоурологиялық араласулар алдындағы антибиотикопрофилактика аудиті',
+  'д-р Марина Волкова',
+  array['Данияр Сейітов', 'Ерлан Нурмагамбетов'],
+  'Анализ данных',
+  'Деректерді талдау',
+  date '2026-08-15',
+  'protocol-antibiotic-audit.pdf',
+  array['EAU Guidelines on Urological Infections', 'AUA antimicrobial prophylaxis statements'],
+  array['EAU урологиялық инфекциялар нұсқаулығы', 'AUA антимикробтық профилактика ұсыныстары'],
+  'Собраны первые карты пациентов, подготовлена таблица соответствия рекомендациям.',
+  'Пациенттердің алғашқы карталары жиналды, нұсқаулықтарға сәйкестік кестесі дайындалды.'
+where not exists (select 1 from public.research_projects where title_ru = 'Аудит антибиотикопрофилактики перед эндоурологическими вмешательствами');
+
+insert into public.library_items (
+  title_ru,
+  title_kz,
+  author,
+  year,
+  category_ru,
+  category_kz,
+  section,
+  external_link,
+  description_ru,
+  description_kz,
+  tags
+)
+select
+  'EAU Guidelines',
+  'EAU нұсқаулықтары',
+  'European Association of Urology',
+  '2026',
+  'Клинические рекомендации',
+  'Клиникалық нұсқаулықтар',
+  'guidelines',
+  'https://uroweb.org/guidelines',
+  'Официальная библиотека рекомендаций EAU по урологии.',
+  'EAU урология бойынша ресми нұсқаулықтар кітапханасы.',
+  array['EAU', 'Guidelines', 'Urology']
+where not exists (select 1 from public.library_items where title_ru = 'EAU Guidelines');
+
+insert into public.library_items (
+  title_ru,
+  title_kz,
+  author,
+  year,
+  category_ru,
+  category_kz,
+  section,
+  external_link,
+  description_ru,
+  description_kz,
+  tags
+)
+select
+  'AUA Guidelines',
+  'AUA нұсқаулықтары',
+  'American Urological Association',
+  '2026',
+  'Клинические рекомендации',
+  'Клиникалық нұсқаулықтар',
+  'guidelines',
+  'https://www.auanet.org/guidelines-and-quality/guidelines',
+  'Официальная библиотека рекомендаций AUA для подготовки Journal Club тем.',
+  'Journal Club тақырыптарын дайындауға арналған AUA ресми нұсқаулықтар кітапханасы.',
+  array['AUA', 'Guidelines', 'Urology']
+where not exists (select 1 from public.library_items where title_ru = 'AUA Guidelines');

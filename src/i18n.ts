@@ -17,7 +17,7 @@ export const navItems: NavItem[] = [
   { id: "research", label: { ru: "Научный центр", kz: "Ғылыми орталық" }, shortLabel: { ru: "Наука", kz: "Ғылым" } },
   { id: "case", label: { ru: "Клинический случай недели", kz: "Аптаның клиникалық жағдайы" }, shortLabel: { ru: "Случай", kz: "Жағдай" } },
   { id: "quiz", label: { ru: "Тесты", kz: "Тесттер" }, shortLabel: { ru: "Тесты", kz: "Тест" } },
-  { id: "admin", label: { ru: "Админ-панель", kz: "Әкімші панелі" }, shortLabel: { ru: "Админ", kz: "Әкімші" } },
+  { id: "admin", label: { ru: "Кабинет редакции", kz: "Редакция кабинеті" }, shortLabel: { ru: "Редакция", kz: "Редакция" } },
 ];
 
 export const t = {

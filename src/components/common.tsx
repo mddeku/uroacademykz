@@ -128,6 +128,7 @@ export function Navbar({
   page,
   lang,
   darkMode,
+  currentUserEmail,
   query,
   searchResults,
   onNavigate,
@@ -138,6 +139,7 @@ export function Navbar({
   page: PageId;
   lang: Lang;
   darkMode: boolean;
+  currentUserEmail: string | null;
   query: string;
   searchResults: SearchItem[];
   onNavigate: (page: PageId) => void;
@@ -147,6 +149,7 @@ export function Navbar({
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const visibleResults = query.trim().length >= 2;
+  const navigationItems = navItems.filter((item) => item.id !== "admin" || currentUserEmail);
 
   return (
     <header className="sticky top-0 z-50 border-b border-clinic-200/80 bg-white/90 backdrop-blur-xl dark:border-white/10 dark:bg-navy-950/90">
@@ -170,7 +173,7 @@ export function Navbar({
           </button>
 
           <nav className="hidden min-w-0 items-center gap-1 overflow-x-auto px-1 lg:flex" aria-label="Primary navigation">
-            {navItems.map((item) => (
+            {navigationItems.map((item) => (
               <NavButton
                 key={item.id}
                 active={page === item.id}
@@ -230,7 +233,7 @@ export function Navbar({
               ) : null}
             </div>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-              {navItems.map((item) => (
+              {navigationItems.map((item) => (
                 <NavButton
                   key={item.id}
                   active={page === item.id}

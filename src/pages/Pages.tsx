@@ -42,6 +42,7 @@ import {
 } from "../data";
 import { navItems, t } from "../i18n";
 import { getCurrentUser, signInAdmin, signOutAdmin } from "../lib/auth";
+import { generateGuidelineTopic } from "../lib/topicGenerator";
 import {
   fetchFaculty,
   fetchLibraryItems,
@@ -54,7 +55,6 @@ import {
   type SiteContentBlock,
 } from "../lib/content";
 import { createResident, fetchResidents } from "../lib/residents";
-import { isSupabaseConfigured } from "../lib/supabase";
 import { FullAdminPage } from "./AdminManager";
 import {
   AdminPanelLayout,
@@ -110,8 +110,23 @@ function PageIntro({
 
 export function HomePage({ lang, countdown, nextMeeting, onNavigate }: PageProps) {
   const [topicIndex, setTopicIndex] = useState(0);
+  const [generatedTopic, setGeneratedTopic] = useState(topicIdeas[0]);
+  const [topicLoading, setTopicLoading] = useState(false);
   const PresentationBadge = bestPresentation.badge;
   const ArticleIcon = articleOfWeek.icon;
+
+  const handleGenerateTopic = async () => {
+    setTopicLoading(true);
+    try {
+      setGeneratedTopic(await generateGuidelineTopic(lang));
+    } catch {
+      const nextIndex = (topicIndex + 1) % topicIdeas.length;
+      setTopicIndex(nextIndex);
+      setGeneratedTopic(topicIdeas[nextIndex]);
+    } finally {
+      setTopicLoading(false);
+    }
+  };
 
   return (
     <>
@@ -165,39 +180,16 @@ export function HomePage({ lang, countdown, nextMeeting, onNavigate }: PageProps
                 </span>
                 <p className="eyebrow">{localize(t.topicGenerator, lang)}</p>
               </div>
-              <p className="mt-4 font-bold text-navy-950 dark:text-white">{localize(topicIdeas[topicIndex], lang)}</p>
+              <p className="mt-4 font-bold text-navy-950 dark:text-white">{localize(generatedTopic, lang)}</p>
               <button
                 className="secondary-button mt-4"
-                onClick={() => setTopicIndex((topicIndex + 1) % topicIdeas.length)}
+                disabled={topicLoading}
+                onClick={handleGenerateTopic}
                 type="button"
               >
                 <RefreshCw className="h-4 w-4" />
-                {localize(t.generate, lang)}
+                {topicLoading ? (lang === "ru" ? "Генерирую..." : "Генерация...") : localize(t.generate, lang)}
               </button>
-            </article>
-            <article className="card p-5">
-              <div className="flex items-center gap-3">
-                <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-600 text-white">
-                  <CheckCircle2 className="h-5 w-5" />
-                </span>
-                <div>
-                  <p className="eyebrow">Supabase</p>
-                  <h3 className="font-bold text-navy-950 dark:text-white">
-                    {isSupabaseConfigured
-                      ? lang === "ru"
-                        ? "Клиент подключен"
-                        : "Клиент қосылды"
-                      : lang === "ru"
-                        ? "Нужны ключи"
-                        : "Кілттер қажет"}
-                  </h3>
-                </div>
-              </div>
-              <p className="muted mt-3">
-                {lang === "ru"
-                  ? "Следующий шаг - создать таблицы и подключить админ-формы к базе."
-                  : "Келесі қадам - кестелер құрып, әкімші формаларын базаға қосу."}
-              </p>
             </article>
           </aside>
         </div>
@@ -521,7 +513,7 @@ function PresentationPreview({ item, lang, onClose }: { item: Presentation; lang
   const isPdf = fileUrl.toLowerCase().includes(".pdf");
 
   return (
-    <div className="fixed inset-0 z-[80] bg-navy-950/70 p-3 backdrop-blur-sm sm:p-6" role="dialog" aria-modal="true">
+    <div className="fixed inset-0 z-[80] bg-navy-950/70 p-0 backdrop-blur-sm sm:p-6" role="dialog" aria-modal="true">
       <div className="mx-auto flex h-full max-w-6xl flex-col overflow-hidden rounded-lg border border-clinic-200 bg-white shadow-lift dark:border-white/10 dark:bg-navy-950">
         <div className="flex items-center justify-between gap-3 border-b border-clinic-200 p-4 dark:border-white/10">
           <div className="min-w-0">
@@ -532,9 +524,14 @@ function PresentationPreview({ item, lang, onClose }: { item: Presentation; lang
             <X className="h-5 w-5" />
           </button>
         </div>
-        <div className="min-h-0 flex-1 bg-clinic-50 p-4 dark:bg-navy-900">
+        <div className="min-h-0 flex-1 overflow-auto bg-clinic-50 p-2 dark:bg-navy-900 sm:p-4">
           {fileUrl && isPdf ? (
-            <iframe className="h-full min-h-[70vh] w-full rounded-lg border border-clinic-200 bg-white dark:border-white/10" src={fileUrl} title={localize(item.title, lang)} />
+            <div className="grid gap-3">
+              <iframe className="h-[72vh] w-full rounded-lg border border-clinic-200 bg-white dark:border-white/10 sm:h-[78vh]" src={`${fileUrl}#view=FitH`} title={localize(item.title, lang)} />
+              <a className="secondary-button justify-center sm:hidden" href={fileUrl} rel="noreferrer" target="_blank">
+                {lang === "ru" ? "Открыть PDF в новой вкладке" : "PDF файлын жаңа қойындыда ашу"}
+              </a>
+            </div>
           ) : fileUrl ? (
             <div className="grid h-full min-h-[60vh] place-items-center rounded-lg border border-clinic-200 bg-white p-6 text-center dark:border-white/10 dark:bg-navy-950">
               <div>

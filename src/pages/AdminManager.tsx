@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import {
   Award,
   BarChart3,
@@ -17,6 +17,7 @@ import {
   UsersRound,
 } from "lucide-react";
 import { AdminPanelLayout } from "../components/common";
+import { researchProjects } from "../data";
 import { getCurrentUser, signInAdmin, signOutAdmin } from "../lib/auth";
 import { supabase } from "../lib/supabase";
 import type { Lang } from "../types";
@@ -300,6 +301,35 @@ function rowValues(config: Config, row: Record<string, unknown>) {
   }));
 }
 
+const fallbackRows: Record<string, Record<string, unknown>[]> = {
+  research: researchProjects.map((project, index) => ({
+    id: `default-research-${index + 1}`,
+    title_ru: project.title.ru,
+    title_kz: project.title.kz,
+    principal_investigator: project.investigator,
+    residents_involved: project.residents,
+    status_ru: project.status.ru,
+    status_kz: project.status.kz,
+    deadline: project.deadline,
+    protocol_file: project.protocol,
+    related_articles_ru: project.related.map((item) => item.ru),
+    related_articles_kz: project.related.map((item) => item.kz),
+    progress_ru: project.progress.ru,
+    progress_kz: project.progress.kz,
+    __fallback: true,
+  })),
+};
+
+function normalizePayload(config: Config, values: Record<string, string>) {
+  const payload = config.toPayload(values);
+  config.fields.forEach((field) => {
+    if ((field.type === "date" || field.type === "time") && payload[field.key] === "") {
+      payload[field.key] = null;
+    }
+  });
+  return payload;
+}
+
 function AdminEditor({ config, currentUserEmail, lang }: { config: Config; currentUserEmail: string | null; lang: Lang }) {
   const [values, setValues] = useState<Record<string, string>>(() => defaultValues(config));
   const [rows, setRows] = useState<Record<string, unknown>[]>([]);
@@ -307,28 +337,53 @@ function AdminEditor({ config, currentUserEmail, lang }: { config: Config; curre
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [lastSavedValues, setLastSavedValues] = useState<Record<string, string> | null>(null);
+  const autoSaveTimer = useRef<number | null>(null);
 
   const loadRows = async () => {
     setLoading(true);
-    const { data, error } = await supabase.from(config.table).select("*").limit(20);
+    const { data, error } = await supabase.from(config.table).select("*").order("created_at", { ascending: false }).limit(100);
     setLoading(false);
     if (error) {
       setMessage(error.message);
       return;
     }
-    setRows(data ?? []);
+    setRows(data?.length ? data : fallbackRows[config.id] ?? []);
   };
 
   useEffect(() => {
     setValues(defaultValues(config));
     setEditingId(null);
+    setLastSavedValues(null);
     setMessage("");
     loadRows();
   }, [config]);
 
+  useEffect(() => {
+    if (config.id !== "siteContent" || !currentUserEmail || !values.page_key || !values.block_key) return;
+    if (autoSaveTimer.current) window.clearTimeout(autoSaveTimer.current);
+    autoSaveTimer.current = window.setTimeout(async () => {
+      const payload = normalizePayload(config, values);
+      const request = editingId
+        ? supabase.from(config.table).update(payload).eq("id", editingId)
+        : supabase.from(config.table).upsert(payload, { onConflict: "page_key,block_key" });
+      const { error } = await request;
+      if (error) {
+        setMessage(error.message);
+        return;
+      }
+      setMessage(lang === "ru" ? "Автосохранено" : "Автоматты сақталды");
+      await loadRows();
+    }, 900);
+
+    return () => {
+      if (autoSaveTimer.current) window.clearTimeout(autoSaveTimer.current);
+    };
+  }, [config, currentUserEmail, editingId, values, lang]);
+
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const payload = config.toPayload(values);
+    const payload = normalizePayload(config, values);
     const request = editingId
       ? supabase.from(config.table).update(payload).eq("id", editingId)
       : config.table === "site_content"
@@ -342,6 +397,7 @@ function AdminEditor({ config, currentUserEmail, lang }: { config: Config; curre
     }
 
     setMessage(editingId ? (lang === "ru" ? "Изменения сохранены" : "Өзгерістер сақталды") : (lang === "ru" ? "Сохранено" : "Сақталды"));
+    setLastSavedValues(values);
     setEditingId(null);
     setValues(defaultValues(config));
     await loadRows();
@@ -460,6 +516,16 @@ function AdminEditor({ config, currentUserEmail, lang }: { config: Config; curre
           <Plus className="h-4 w-4" />
           {editingId ? (lang === "ru" ? "Обновить запись" : "Жазбаны жаңарту") : (lang === "ru" ? "Сохранить" : "Сақтау")}
         </button>
+        {config.id === "siteContent" ? (
+          <button
+            className="secondary-button md:col-span-2"
+            disabled={!lastSavedValues}
+            onClick={() => lastSavedValues ? setValues(lastSavedValues) : undefined}
+            type="button"
+          >
+            {lang === "ru" ? "Отменить изменение" : "Өзгерісті болдырмау"}
+          </button>
+        ) : null}
       </form>
 
       {!currentUserEmail ? <p className="muted">{lang === "ru" ? "Сначала войдите администратором." : "Алдымен әкімші ретінде кіріңіз."}</p> : null}
@@ -482,10 +548,10 @@ function AdminEditor({ config, currentUserEmail, lang }: { config: Config; curre
                 <p className="muted font-mono">{String(row.id)}</p>
               </div>
               <div className="flex shrink-0 gap-2">
-                <button className="icon-button" disabled={!currentUserEmail} onClick={() => { setValues(rowValues(config, row)); setEditingId(String(row.id)); }} type="button">
+                <button className="icon-button" disabled={!currentUserEmail} onClick={() => { const nextValues = rowValues(config, row); setValues(nextValues); setLastSavedValues(nextValues); setEditingId(row.__fallback ? null : String(row.id)); }} type="button">
                   <Edit3 className="h-4 w-4" />
                 </button>
-                <button className="icon-button" disabled={!currentUserEmail} onClick={() => deleteRow(row.id)} type="button">
+                <button className="icon-button" disabled={!currentUserEmail || Boolean(row.__fallback)} onClick={() => deleteRow(row.id)} type="button">
                   <Trash2 className="h-4 w-4" />
                 </button>
               </div>
@@ -529,31 +595,37 @@ export function FullAdminPage({ lang }: { lang: Lang }) {
     setAuthMessage(lang === "ru" ? "Вы вышли из аккаунта" : "Аккаунттан шықтыңыз");
   };
 
+  const loginCard = (
+    <div className="shell py-10">
+      <article className="card mx-auto max-w-xl p-5">
+          <div className="flex items-center gap-3">
+            <ShieldCheck className="h-5 w-5 text-gold-700 dark:text-gold-300" />
+            <h3 className="font-bold text-navy-950 dark:text-white">{lang === "ru" ? "Вход в кабинет редакции" : "Редакция кабинетіне кіру"}</h3>
+          </div>
+          <form className="mt-4 grid gap-3" onSubmit={signIn}>
+            <input className="field" onChange={(event) => setAdminEmail(event.target.value)} placeholder="admin@example.com" type="email" value={adminEmail} />
+            <input className="field" onChange={(event) => setAdminPassword(event.target.value)} placeholder={lang === "ru" ? "Пароль" : "Құпиясөз"} type="password" value={adminPassword} />
+            <button className="primary-button" type="submit"><ShieldCheck className="h-4 w-4" />{lang === "ru" ? "Войти" : "Кіру"}</button>
+          </form>
+          {authMessage ? <p className="muted mt-3">{authMessage}</p> : null}
+        </article>
+    </div>
+  );
+
+  if (!currentUserEmail) return loginCard;
+
   return (
     <AdminPanelLayout lang={lang} activeSection={activeSection} onSectionChange={setActiveSection}>
       <div className="grid gap-4">
         <article className="card p-5">
-          <div className="flex items-center gap-3">
-            <ShieldCheck className="h-5 w-5 text-gold-700 dark:text-gold-300" />
-            <h3 className="font-bold text-navy-950 dark:text-white">{lang === "ru" ? "Вход администратора" : "Әкімші кіруі"}</h3>
+          <div className="mt-1 flex flex-wrap items-center gap-3">
+            <p className="rounded-lg bg-emerald-50 p-3 text-sm font-semibold text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-200">
+              {lang === "ru" ? "Вы вошли как" : "Сіз кірдіңіз"} {currentUserEmail}
+            </p>
+            <button className="secondary-button" onClick={signOut} type="button">{lang === "ru" ? "Выйти" : "Шығу"}</button>
           </div>
-          {currentUserEmail ? (
-            <div className="mt-4 flex flex-wrap items-center gap-3">
-              <p className="rounded-lg bg-emerald-50 p-3 text-sm font-semibold text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-200">
-                {lang === "ru" ? "Вы вошли как" : "Сіз кірдіңіз"} {currentUserEmail}
-              </p>
-              <button className="secondary-button" onClick={signOut} type="button">{lang === "ru" ? "Выйти" : "Шығу"}</button>
-            </div>
-          ) : (
-            <form className="mt-4 grid gap-3 md:grid-cols-[1fr_1fr_auto]" onSubmit={signIn}>
-              <input className="field" onChange={(event) => setAdminEmail(event.target.value)} placeholder="admin@example.com" type="email" value={adminEmail} />
-              <input className="field" onChange={(event) => setAdminPassword(event.target.value)} placeholder={lang === "ru" ? "Пароль" : "Құпиясөз"} type="password" value={adminPassword} />
-              <button className="primary-button" type="submit"><ShieldCheck className="h-4 w-4" />{lang === "ru" ? "Войти" : "Кіру"}</button>
-            </form>
-          )}
           {authMessage ? <p className="muted mt-3">{authMessage}</p> : null}
         </article>
-
         <article className="card p-5">
           <div className="flex items-center gap-3">
             <Icon className="h-5 w-5 text-gold-700 dark:text-gold-300" />

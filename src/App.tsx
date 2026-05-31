@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { meetings, searchItems } from "./data";
 import { Footer, Navbar, useFilteredSearch } from "./components/common";
+import { getCurrentUser } from "./lib/auth";
 import type { Lang, Meeting, PageId } from "./types";
 import {
   AcademyPage,
@@ -45,6 +46,7 @@ export default function App() {
   const [darkMode, setDarkMode] = useState(false);
   const [query, setQuery] = useState("");
   const [clock, setClock] = useState(Date.now());
+  const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
 
   const nextMeeting = useMemo(getNextMeeting, [clock]);
   const searchResults = useFilteredSearch(searchItems, query, lang);
@@ -58,6 +60,10 @@ export default function App() {
   useEffect(() => {
     document.documentElement.lang = lang === "ru" ? "ru" : "kk";
   }, [lang]);
+
+  useEffect(() => {
+    getCurrentUser().then((user) => setCurrentUserEmail(user?.email ?? null));
+  }, []);
 
   const navigate = (nextPage: PageId) => {
     setPage(nextPage);
@@ -73,6 +79,7 @@ export default function App() {
           page={page}
           lang={lang}
           darkMode={darkMode}
+          currentUserEmail={currentUserEmail}
           query={query}
           searchResults={searchResults}
           onNavigate={navigate}
