@@ -73,7 +73,7 @@ export async function fetchLibraryItems(): Promise<LibraryItem[]> {
     section: row.section,
     description: { ru: row.description_ru ?? "", kz: row.description_kz ?? "" },
     tags: row.tags ?? [],
-    link: row.external_link ?? row.file_url ?? "",
+    link: row.external_link || row.file_url || "",
   }));
 }
 
