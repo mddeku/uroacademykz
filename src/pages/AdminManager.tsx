@@ -363,6 +363,141 @@ const fallbackRows: Record<string, Record<string, unknown>[]> = {
   })),
 };
 
+const siteContentTemplates: Record<string, unknown>[] = [
+  {
+    id: "template-site-home-hero",
+    page_key: "home",
+    block_key: "hero",
+    title_ru: "UroAcademy KZ",
+    title_kz: "UroAcademy KZ",
+    body_ru: "Образовательная платформа кафедры урологии и андрологии",
+    body_kz: "Урология және андрология кафедрасының білім беру платформасы",
+    sort_order: 10,
+    is_published: true,
+    __fallback: true,
+  },
+  {
+    id: "template-site-home-slogan",
+    page_key: "home",
+    block_key: "slogan",
+    title_ru: "Главный слоган",
+    title_kz: "Негізгі ұран",
+    body_ru: "Учимся через обсуждение. Развиваем урологию вместе.",
+    body_kz: "Талқылау арқылы үйренеміз. Урологияны бірге дамытамыз.",
+    sort_order: 20,
+    is_published: true,
+    __fallback: true,
+  },
+  {
+    id: "template-site-academy-slide-rules",
+    page_key: "academy",
+    block_key: "slide_rules",
+    title_ru: "Правила сильных слайдов",
+    title_kz: "Мықты слайд ережелері",
+    body_ru: "1 слайд = 1 take-home message; максимум 6 строк; использовать схемы и таблицы; завершать 3-5 выводами.",
+    body_kz: "1 слайд = 1 негізгі ой; ең көбі 6 жол; схемалар мен кестелер қолдану; 3-5 тұжырыммен аяқтау.",
+    sort_order: 40,
+    is_published: true,
+    __fallback: true,
+  },
+  {
+    id: "template-site-academy-templates",
+    page_key: "academy",
+    block_key: "templates",
+    title_ru: "Готовые шаблоны презентаций",
+    title_kz: "Дайын презентация үлгілері",
+    body_ru: "Шаблон статьи, рекомендации, клинического случая и исследовательского проекта.",
+    body_kz: "Мақала, нұсқаулық, клиникалық жағдай және ғылыми жоба үлгілері.",
+    sort_order: 50,
+    is_published: true,
+    __fallback: true,
+  },
+  {
+    id: "template-site-archive-page-intro",
+    page_key: "archive",
+    block_key: "page_intro",
+    title_ru: "Архив докладов",
+    title_kz: "Баяндамалар архиві",
+    body_ru: "Блог-архив кафедральных докладов с аннотациями, ключевыми выводами, тегами и зонами для файлов.",
+    body_kz: "Аннотация, негізгі тұжырым, тегтер және файл аймақтары бар кафедралық баяндамалар блог-архиві.",
+    sort_order: 70,
+    is_published: true,
+    __fallback: true,
+  },
+  {
+    id: "template-site-case-case-of-week",
+    page_key: "case",
+    block_key: "case_of_week",
+    title_ru: "Клинический случай недели",
+    title_kz: "Аптаның клиникалық жағдайы",
+    body_ru: "Интерактивный клинический случай с голосованием, дифференциальным диагнозом и учебными выводами.",
+    body_kz: "Дауыс беру, дифференциалды диагноз және оқу тұжырымдары бар интерактивті клиникалық жағдай.",
+    sort_order: 60,
+    is_published: true,
+    __fallback: true,
+  },
+  {
+    id: "template-site-case-media",
+    page_key: "case",
+    block_key: "case_media",
+    title_ru: "Изображения, видео и файлы",
+    title_kz: "Суреттер, видео және файлдар",
+    body_ru: "Медиа и вложения клинического случая недели.",
+    body_kz: "Аптаның клиникалық жағдайына арналған медиа және файлдар.",
+    sort_order: 61,
+    is_published: true,
+    __fallback: true,
+  },
+  {
+    id: "template-site-case-opinion",
+    page_key: "case",
+    block_key: "case_opinion",
+    title_ru: "Мнение аудитории",
+    title_kz: "Аудитория пікірі",
+    body_ru: "Блок комментариев и мнений под клиническим случаем.",
+    body_kz: "Клиникалық жағдай астындағы пікірлер мен комментарийлер блогы.",
+    sort_order: 62,
+    is_published: true,
+    __fallback: true,
+  },
+  {
+    id: "template-site-case-answer",
+    page_key: "case",
+    block_key: "case_answer",
+    title_ru: "Финальный ответ и учебные выводы",
+    title_kz: "Қорытынды жауап және оқу тұжырымдары",
+    body_ru: "Финальный разбор, диагноз, тактика и ключевые выводы.",
+    body_kz: "Қорытынды талдау, диагноз, тактика және негізгі тұжырымдар.",
+    sort_order: 63,
+    is_published: true,
+    __fallback: true,
+  },
+];
+
+function mergeSiteContentTemplates(rows: Record<string, unknown>[]) {
+  const existing = new Set(rows.map((row) => `${String(row.page_key ?? "")}/${String(row.block_key ?? "")}`));
+  const missing = siteContentTemplates.filter((row) => !existing.has(`${String(row.page_key)}/${String(row.block_key)}`));
+  return [...rows, ...missing].sort((a, b) => numeric(String(a.sort_order ?? "0")) - numeric(String(b.sort_order ?? "0")));
+}
+
+function missingSiteContentTemplates(rows: Record<string, unknown>[]) {
+  const existing = new Set(rows.map((row) => `${String(row.page_key ?? "")}/${String(row.block_key ?? "")}`));
+  return siteContentTemplates.filter((row) => !existing.has(`${String(row.page_key)}/${String(row.block_key)}`));
+}
+
+function siteContentPayload(row: Record<string, unknown>) {
+  return {
+    page_key: row.page_key,
+    block_key: row.block_key,
+    title_ru: row.title_ru,
+    title_kz: row.title_kz,
+    body_ru: row.body_ru,
+    body_kz: row.body_kz,
+    sort_order: row.sort_order,
+    is_published: row.is_published,
+  };
+}
+
 function normalizePayload(config: Config, values: Record<string, string>) {
   const payload = config.toPayload(values);
   config.fields.forEach((field) => {
@@ -391,7 +526,23 @@ function AdminEditor({ config, currentUserEmail, lang }: { config: Config; curre
       setMessage(error.message);
       return;
     }
-    setRows(data?.length ? data : fallbackRows[config.id] ?? []);
+    const loadedRows = data?.length ? data : fallbackRows[config.id] ?? [];
+    if (config.id === "siteContent") {
+      const missingTemplates = missingSiteContentTemplates(loadedRows);
+      if (currentUserEmail && missingTemplates.length) {
+        const { error: seedError } = await supabase
+          .from(config.table)
+          .upsert(missingTemplates.map(siteContentPayload), { onConflict: "page_key,block_key" });
+        if (!seedError) {
+          const { data: refreshedData } = await supabase.from(config.table).select("*").order("created_at", { ascending: false }).limit(100);
+          setRows(mergeSiteContentTemplates(refreshedData ?? loadedRows));
+          return;
+        }
+      }
+      setRows(mergeSiteContentTemplates(loadedRows));
+      return;
+    }
+    setRows(loadedRows);
   };
 
   useEffect(() => {

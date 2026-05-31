@@ -504,6 +504,10 @@ export function NewsCard({ post, lang, onOpen }: { post: NewsPost; lang: Lang; o
 }
 
 export function LibraryCard({ item, lang }: { item: LibraryItem; lang: Lang }) {
+  const linkLabel = item.link?.includes("/storage/v1/object/")
+    ? (lang === "ru" ? "Открыть файл" : "Файлды ашу")
+    : (lang === "ru" ? "Открыть ссылку" : "Сілтемені ашу");
+
   return (
     <article className="card flex h-full flex-col p-5">
       <div className="flex items-center gap-3">
@@ -519,8 +523,9 @@ export function LibraryCard({ item, lang }: { item: LibraryItem; lang: Lang }) {
       <p className="muted mt-3">{localize(item.description, lang)}</p>
       <div className="mt-auto flex flex-wrap gap-2 pt-5">
         {item.link ? (
-          <a className="tag" href={item.link} rel="noreferrer" target="_blank">
-            <Upload className="mr-1.5 h-3.5 w-3.5" />{item.link}
+          <a className="tag max-w-full" href={item.link} rel="noreferrer" target="_blank" title={item.link}>
+            <Upload className="mr-1.5 h-3.5 w-3.5 shrink-0" />
+            <span className="truncate">{linkLabel}</span>
           </a>
         ) : null}
         {item.tags.map((tag) => <span className="tag" key={tag}>{tag}</span>)}
